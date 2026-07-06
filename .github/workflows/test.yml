@@ -21,7 +21,7 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v7
 
     - name: Prep
       run: |
@@ -34,13 +34,14 @@ jobs:
   ##############################################################################
   TestMatrix:
     strategy:
+      fail-fast: false
       matrix:
-        lua-version: ["5.4", "luajit-2.1"]
+        lua-version: ["5.4", "5.5", "luajit-2.1"]
         os: ["ubuntu-latest", "macos-latest"]
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v7
 
     - uses: hishamhm/gh-actions-lua@master
       with:
@@ -48,19 +49,21 @@ jobs:
 
     - uses: luarocks/gh-actions-luarocks@master
       with:
-        luaRocksVersion: "3.12.2"
+        luaRocksVersion: "3.13.0"
 
     - name: 'Setup macOS deps'
-      if: ${{ contains(matrix.os, 'macos') }}
+      if: runner.os == 'macOS'
       run: brew install openssl bzip2
 
     - name: 'Setup Ubuntu deps'
-      if: ${{ contains(matrix.os, 'ubuntu') }}
+      if: runner.os == 'Linux'
       run: sudo apt-get install libbz2-dev
+
+    - if: ${{ matrix.lua-version != '5.5' }}
+      run: luarocks install compat53
 
     - name: Prep
       run: |
-        luarocks install compat53
         luarocks install busted
         luarocks install cluacov
         luarocks install busted-htest
@@ -79,9 +82,9 @@ jobs:
       run: luacov -c "testrun/luacov.config"
 
     - name: Setup Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
-        python-version: '3.11'
+        python-version: 3.x
 
     - name: Install Codecov
       run: pip install codecov
@@ -95,7 +98,7 @@ jobs:
   SmokeTest:
     runs-on: "ubuntu-latest"
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v7
 
     - uses: hishamhm/gh-actions-lua@master
       with:
@@ -111,7 +114,7 @@ jobs:
   BinaryBuild:
     runs-on: "ubuntu-latest"
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v7
 
     - uses: hishamhm/gh-actions-lua@master
       with:
@@ -249,7 +252,7 @@ jobs:
       # The following env variables
       # only applies to Visual Studio
       LUAROCKS_DEPS_DIR: c:\external
-      LUAROCKS_DEPS_OPENSSL_VER: "3.6.2"
+      LUAROCKS_DEPS_OPENSSL_VER: "3.6.3"
       LUAROCKS_DEPS_ZLIB_VER: "1.3.1"
       # The following env variable
       # applies to both Visual Studio and MinGW-w64
@@ -260,7 +263,7 @@ jobs:
 
       - name: Setup MSVC dev prompt
         if: ${{ matrix.COMPILER == 'vs' }}
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: step-security/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.ARCH }}
 
@@ -271,7 +274,7 @@ jobs:
       - name: Restore zlib tarball
         if: ${{ matrix.COMPILER == 'vs' }}
         id: restore-zlib-tarball
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: zlib-${{ env.LUAROCKS_DEPS_ZLIB_VER }}.tar.gz
           key: zlib-${{ env.LUAROCKS_DEPS_ZLIB_VER }}
@@ -284,7 +287,7 @@ jobs:
 
       - name: Save zlib tarball
         if: ${{ matrix.COMPILER == 'vs' && steps.restore-zlib-tarball.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: zlib-${{ env.LUAROCKS_DEPS_ZLIB_VER }}.tar.gz
           key: zlib-${{ env.LUAROCKS_DEPS_ZLIB_VER }}
@@ -322,7 +325,7 @@ jobs:
       - name: Restore bzip2 tarball
         if: ${{ matrix.COMPILER == 'vs' }}
         id: restore-bzip2-tarball
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: bzip2.tar.gz
           key: bzip2
@@ -336,7 +339,7 @@ jobs:
 
       - name: Save bzip2 tarball
         if: ${{ matrix.COMPILER == 'vs' && steps.restore-bzip2-tarball.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: bzip2.tar.gz
           key: bzip2
@@ -374,7 +377,7 @@ jobs:
       - name: Restore OpenSSL installer
         if: ${{ matrix.COMPILER == 'vs' }}
         id: restore-openssl-installer
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: build\openssl-installer-${{ env.LUAROCKS_DEPS_OPENSSL_VER }}-${{ matrix.ARCH }}.exe
           key: openssl-${{ env.LUAROCKS_DEPS_OPENSSL_VER }}-${{ matrix.ARCH }}
@@ -451,7 +454,7 @@ jobs:
 
       - name: Save OpenSSL installer
         if: ${{ matrix.COMPILER == 'vs' && steps.restore-openssl-installer.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: build\openssl-installer-${{ env.LUAROCKS_DEPS_OPENSSL_VER }}-${{ matrix.ARCH }}.exe
           key: openssl-${{ env.LUAROCKS_DEPS_OPENSSL_VER }}-${{ matrix.ARCH }}
@@ -522,11 +525,11 @@ jobs:
           )
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           # employ the latest Python version
           # described at https://pypi.org/project/hererocks/
-          python-version: '3.11'
+          python-version: 3.x
 
       - name: Install SSL certificate
         run: |
@@ -546,7 +549,7 @@ jobs:
           hererocks ^
             "%CURRENT_LUA_DIRNAME%" ^
             "--${{ matrix.LUAT }}" "${{ matrix.LUAV }}" ^
-            --luarocks "3.12.2" ^
+            --luarocks "3.13.0" ^
             "--target=${{ matrix.COMPILER }}"
 
           IF %ERRORLEVEL% NEQ 0 (
