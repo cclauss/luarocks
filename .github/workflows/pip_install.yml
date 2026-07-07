@@ -1,0 +1,17 @@
+name: pip_install
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  pip_install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.x
+      - run: pip install git+https://github.com/bastibe/lunatic-python
